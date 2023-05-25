@@ -499,6 +499,7 @@ end
 
 function set_neighbors!(g::BipartiteGraph, i::Integer, new_neighbors)
     old_neighbors = g.fadjlist[i]
+    new_neighbors = unique!(sort(new_neighbors))
     old_nneighbors = length(old_neighbors)
     new_nneighbors = length(new_neighbors)
     g.ne += new_nneighbors - old_nneighbors
@@ -522,7 +523,7 @@ function set_neighbors!(g::BipartiteGraph, i::Integer, new_neighbors)
         # Warning: Aliases old_neighbors
         empty!(g.fadjlist[i])
     else
-        g.fadjlist[i] = unique!(sort(new_neighbors))
+        g.fadjlist[i] = new_neighbors
     end
 end
 

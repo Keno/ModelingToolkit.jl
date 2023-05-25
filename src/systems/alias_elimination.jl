@@ -16,8 +16,8 @@ function alias_eliminate_graph!(state::TransformationState; kwargs...)
         for (ei, e) in enumerate(mm.nzrows)
             set_neighbors!(g, e, mm.row_cols[ei])
         end
-        update_graph_neighbors!(g, ag)
     end
+    update_graph_neighbors!(s.solvable_graph, s.graph, ag)
 
     return ag, mm, complete_ag, complete_mm
 end
@@ -917,12 +917,24 @@ function alias_eliminate_graph!(state::TransformationState, mm_orig::SparseMatri
     return ag, mm, complete_ag, complete_mm
 end
 
-function update_graph_neighbors!(graph, ag)
+function update_graph_neighbors!(solvable_graph, graph, ag)
+    vars_to_aliases(ag, vars) = Int[get(ag, v, (1, v))[2]
+                                 for v in vars if !haskey(ag, v) || ag[v][2] != 0]
     for eq in 1:nsrcs(graph)
-        set_neighbors!(graph, eq,
-                       Int[get(ag, n, (1, n))[2]
-                           for n in 𝑠neighbors(graph, eq)
-                           if !haskey(ag, n) || ag[n][2] != 0])
+        # Collect the variables for this equation in the graph and the solvable graph
+        graph_eq_vars = 𝑠neighbors(graph, eq)
+        solvable_graph_eq_vars = 𝑠neighbors(solvable_graph, eq)
+
+        # Use `setdiff()` to find the unsolvable vars, and map them to their aliases
+        unsolvable_aliases = vars_to_aliases(ag, setdiff(graph_eq_vars, solvable_graph_eq_vars))
+
+        # Get the same set of aliases in `solvable_graph` that exist in `graph` by filtering
+        # out all of the unsolvable aliases (e.g. the ones that only exist wtihin `solvable_graph`)
+        solvable_graph_aliases = [v for v in vars_to_aliases(ag, solvable_graph_eq_vars) if v ∉ unsolvable_aliases]
+
+        # Update the graphs with these lists of aliases.
+        set_neighbors!(graph, eq, vars_to_aliases(ag, graph_eq_vars))
+        set_neighbors!(solvable_graph, eq, solvable_graph_aliases)
     end
     return graph
 end
